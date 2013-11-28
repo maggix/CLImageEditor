@@ -12,6 +12,7 @@
 #import "UIView+Frame.h"
 #import "UIImage+Utility.h"
 #import "UIView+CLImageToolInfo.h"
+#import "PhotoDisplayViewController.h"
 
 
 @interface _CLImageEditorViewController()
@@ -360,9 +361,17 @@
 
 - (void)pushedFinishBtn:(id)sender
 {
-    if([self.delegate respondsToSelector:@selector(imageEditor:didFinishEdittingWithImage:)]){
-        [self.delegate imageEditor:self didFinishEdittingWithImage:_originalImage];
-    }
+    
+    //TODO: HERE INTERCEPT
+    PhotoDisplayViewController *p = [[PhotoDisplayViewController alloc] initWithNibName:@"PhotoDisplayViewController" bundle:nil];
+    p.startingImage = _originalImage;
+    [self.navigationController pushViewController:p animated:YES];
+
+    
+    
+//    if([self.delegate respondsToSelector:@selector(imageEditor:didFinishEdittingWithImage:)]){
+//        [self.delegate imageEditor:self didFinishEdittingWithImage:_originalImage];
+//    }
 }
 
 #pragma mark- ScrollView delegate
