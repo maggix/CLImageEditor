@@ -63,7 +63,7 @@
     _menuView.backgroundColor = [UIColor colorWithWhite:1 alpha:0.8];
     
     if(self.navigationController!=nil){
-        self.navigationItem.rightBarButtonItem = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemDone target:self action:@selector(pushedFinishBtn:)];
+        self.navigationItem.rightBarButtonItem = [[UIBarButtonItem alloc] initWithTitle:NSLocalizedString(@"Continue", @"Continue") style:UIBarButtonItemStyleDone target:self action:@selector(pushedFinishBtn:)];
         [self.navigationController setNavigationBarHidden:NO animated:YES];
         
         _navigationBar.hidden = YES;
