@@ -7,11 +7,7 @@
 
 #import "CLFilterTool.h"
 
-#import "CLClassList.h"
 #import "CLFilterBase.h"
-#import "UIImage+Utility.h"
-#import "UIView+Frame.h"
-#import "UIView+CLImageToolInfo.h"
 
 
 @implementation CLFilterTool
@@ -23,21 +19,12 @@
 
 + (NSArray*)subtools
 {
-    NSMutableArray *array = [NSMutableArray array];
-    
-    NSArray *list = [CLClassList subclassesOfClass:[CLFilterBase class]];
-    for(Class subtool in list){
-        CLImageToolInfo *info = [CLImageToolInfo toolInfoForToolClass:subtool];
-        if(info){
-            [array addObject:info];
-        }
-    }
-    return [array copy];
+    return [CLImageToolInfo toolsWithToolClass:[CLFilterBase class]];
 }
 
 + (NSString*)defaultTitle
 {
-    return @"Filter";
+    return NSLocalizedStringWithDefaultValue(@"CLFilterTool_DefaultTitle", nil, [CLImageEditorTheme bundle], @"Filter", @"");
 }
 
 + (BOOL)isAvailable
@@ -93,35 +80,14 @@
             continue;
         }
         
-        UIView *view = [[UIView alloc] initWithFrame:CGRectMake(x, 0, W, W)];
-        view.toolInfo = info;
-        
-        UIImageView *iconView = [[UIImageView alloc] initWithFrame:CGRectMake(10, 5, 50, 50)];
-        iconView.clipsToBounds = YES;
-        iconView.layer.cornerRadius = 5;
-        iconView.contentMode = UIViewContentModeScaleAspectFill;
-        [view addSubview:iconView];
-        
-        UILabel *label = [[UILabel alloc] initWithFrame:CGRectMake(0, W-10, W, 15)];
-        label.backgroundColor = [UIColor clearColor];
-        label.text = info.title;
-        label.font = [UIFont systemFontOfSize:10];
-        label.textAlignment = NSTextAlignmentCenter;
-        [view addSubview:label];
-        
-        UITapGestureRecognizer *gesture = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(tappedFilterPanel:)];
-        [view addGestureRecognizer:gesture];
-        
+        CLToolbarMenuItem *view = [CLImageEditorTheme menuItemWithFrame:CGRectMake(x, 0, W, _menuScroll.height) target:self action:@selector(tappedFilterPanel:) toolInfo:info];
         [_menuScroll addSubview:view];
         x += W;
         
-        if(info.iconImagePath){
-            iconView.image = info.iconImage;
-        }
-        else{
+        if(view.iconImage==nil){
             dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
                 UIImage *iconImage = [self filteredImage:iconThumnail withToolInfo:info];
-                [iconView performSelectorOnMainThread:@selector(setImage:) withObject:iconImage waitUntilDone:NO];
+                [view performSelectorOnMainThread:@selector(setIconImage:) withObject:iconImage waitUntilDone:NO];
             });
         }
     }
@@ -130,6 +96,11 @@
 
 - (void)tappedFilterPanel:(UITapGestureRecognizer*)sender
 {
+    static BOOL inProgress = NO;
+    
+    if(inProgress){ return; }
+    inProgress = YES;
+    
     UIView *view = sender.view;
     
     view.alpha = 0.2;
@@ -142,6 +113,7 @@
     dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
         UIImage *image = [self filteredImage:_originalImage withToolInfo:view.toolInfo];
         [self.editor.imageView performSelectorOnMainThread:@selector(setImage:) withObject:image waitUntilDone:NO];
+        inProgress = NO;
     });
 }
 

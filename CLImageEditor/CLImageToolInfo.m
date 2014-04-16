@@ -7,30 +7,12 @@
 
 #import "CLImageToolInfo.h"
 
-#import "CLImageToolProtocol.h"
-
 @interface CLImageToolInfo()
 @property (nonatomic, strong) NSString *toolName;
 @property (nonatomic, strong) NSArray *subtools;
 @end
 
 @implementation CLImageToolInfo
-
-+ (CLImageToolInfo*)toolInfoForToolClass:(Class<CLImageToolProtocol>)toolClass;
-{
-    if([(Class)toolClass conformsToProtocol:@protocol(CLImageToolProtocol)] && [toolClass isAvailable]){
-        CLImageToolInfo *info = [CLImageToolInfo new];
-        info.toolName  = NSStringFromClass(toolClass);
-        info.title     = [toolClass defaultTitle];
-        info.available = YES;
-        info.dockedNumber = [toolClass defaultDockedNumber];
-        info.iconImagePath = [toolClass defaultIconImagePath];
-        info.subtools = [toolClass subtools];
-        return info;
-    }
-    
-    return nil;
-}
 
 - (void)setObject:(id)object forKey:(NSString *)key inDictionary:(NSMutableDictionary*)dictionary
 {
@@ -53,6 +35,9 @@
     [self setObject:@(self.dockedNumber) forKey:@"dockedNumber" inDictionary:dict];
     [self setObject:self.iconImagePath forKey:@"iconImagePath" inDictionary:dict];
     [self setObject:array forKey:@"subtools" inDictionary:dict];
+    if(self.optionalInfo){
+        [self setObject:self.optionalInfo forKey:@"optionalInfo" inDictionary:dict];
+    }
     
     return dict;
 }
@@ -77,7 +62,6 @@
 {
     return [NSString stringWithFormat:@"\n%@", [self toolTreeDescriptionWithSpace:@""]];
 }
-
 
 - (UIImage*)iconImage
 {

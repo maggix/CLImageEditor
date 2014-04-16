@@ -7,9 +7,6 @@
 
 #import "CLAdjustmentTool.h"
 
-#import "UIImage+Utility.h"
-#import "UIView+Frame.h"
-
 @implementation CLAdjustmentTool
 {
     UIImage *_originalImage;
@@ -23,7 +20,7 @@
 
 + (NSString*)defaultTitle
 {
-    return @"Adjustment";
+    return NSLocalizedStringWithDefaultValue(@"CLAdjustmentTool_DefaultTitle", nil, [CLImageEditorTheme bundle], @"Adjustment", @"");
 }
 
 + (BOOL)isAvailable
@@ -36,10 +33,7 @@
     _originalImage = self.editor.imageView.image;
     _thumnailImage = [_originalImage resize:self.editor.imageView.frame.size];
     
-    CGFloat minZoomScale = self.editor.scrollView.minimumZoomScale;
-    self.editor.scrollView.maximumZoomScale = 0.95*minZoomScale;
-    self.editor.scrollView.minimumZoomScale = 0.95*minZoomScale;
-    [self.editor.scrollView setZoomScale:self.editor.scrollView.minimumZoomScale animated:YES];
+    [self.editor fixZoomScaleWithAnimated:YES];
     
     [self setupSlider];
 }
@@ -51,16 +45,13 @@
     [_brightnessSlider.superview removeFromSuperview];
     [_contrastSlider.superview removeFromSuperview];
     
-    [self.editor resetZoomScaleWithAnimate:YES];
+    [self.editor resetZoomScaleWithAnimated:YES];
 }
 
 - (void)executeWithCompletionBlock:(void(^)(UIImage *image, NSError *error, NSDictionary *userInfo))completionBlock
 {
     dispatch_async(dispatch_get_main_queue(), ^{
-        _indicatorView = [[UIActivityIndicatorView alloc] initWithFrame:CGRectMake(0, 0, 80, 80)];
-        _indicatorView.backgroundColor = [UIColor colorWithWhite:0 alpha:0.6];
-        _indicatorView.layer.cornerRadius = 5;
-        _indicatorView.activityIndicatorViewStyle = UIActivityIndicatorViewStyleWhiteLarge;
+        _indicatorView = [CLImageEditorTheme indicatorView];
         _indicatorView.center = self.editor.view.center;
         [self.editor.view addSubview:_indicatorView];
         [_indicatorView startAnimating];
@@ -102,20 +93,20 @@
 {
     _saturationSlider = [self sliderWithValue:1 minimumValue:0 maximumValue:2 action:@selector(sliderDidChange:)];
     _saturationSlider.superview.center = CGPointMake(self.editor.view.width/2, self.editor.menuView.top-30);
-    [_saturationSlider setThumbImage:[UIImage imageNamed:[NSString stringWithFormat:@"CLImageEditor.bundle/%@/saturation.png", [self class]]] forState:UIControlStateNormal];
-    [_saturationSlider setThumbImage:[UIImage imageNamed:[NSString stringWithFormat:@"CLImageEditor.bundle/%@/saturation.png", [self class]]] forState:UIControlStateHighlighted];
+    [_saturationSlider setThumbImage:[CLImageEditorTheme imageNamed:[NSString stringWithFormat:@"%@/saturation.png", [self class]]] forState:UIControlStateNormal];
+    [_saturationSlider setThumbImage:[CLImageEditorTheme imageNamed:[NSString stringWithFormat:@"%@/saturation.png", [self class]]] forState:UIControlStateHighlighted];
     
     _brightnessSlider = [self sliderWithValue:0 minimumValue:-1 maximumValue:1 action:@selector(sliderDidChange:)];
     _brightnessSlider.superview.center = CGPointMake(20, _saturationSlider.superview.top - 150);
     _brightnessSlider.superview.transform = CGAffineTransformMakeRotation(-M_PI * 90 / 180.0f);
-    [_brightnessSlider setThumbImage:[UIImage imageNamed:[NSString stringWithFormat:@"CLImageEditor.bundle/%@/brightness.png", [self class]]] forState:UIControlStateNormal];
-    [_brightnessSlider setThumbImage:[UIImage imageNamed:[NSString stringWithFormat:@"CLImageEditor.bundle/%@/brightness.png", [self class]]] forState:UIControlStateHighlighted];
+    [_brightnessSlider setThumbImage:[CLImageEditorTheme imageNamed:[NSString stringWithFormat:@"%@/brightness.png", [self class]]] forState:UIControlStateNormal];
+    [_brightnessSlider setThumbImage:[CLImageEditorTheme imageNamed:[NSString stringWithFormat:@"%@/brightness.png", [self class]]] forState:UIControlStateHighlighted];
     
     _contrastSlider = [self sliderWithValue:1 minimumValue:0.5 maximumValue:1.5 action:@selector(sliderDidChange:)];
     _contrastSlider.superview.center = CGPointMake(300, _brightnessSlider.superview.center.y);
     _contrastSlider.superview.transform = CGAffineTransformMakeRotation(-M_PI * 90 / 180.0f);
-    [_contrastSlider setThumbImage:[UIImage imageNamed:[NSString stringWithFormat:@"CLImageEditor.bundle/%@/contrast.png", [self class]]] forState:UIControlStateNormal];
-    [_contrastSlider setThumbImage:[UIImage imageNamed:[NSString stringWithFormat:@"CLImageEditor.bundle/%@/contrast.png", [self class]]] forState:UIControlStateHighlighted];
+    [_contrastSlider setThumbImage:[CLImageEditorTheme imageNamed:[NSString stringWithFormat:@"%@/contrast.png", [self class]]] forState:UIControlStateNormal];
+    [_contrastSlider setThumbImage:[CLImageEditorTheme imageNamed:[NSString stringWithFormat:@"%@/contrast.png", [self class]]] forState:UIControlStateHighlighted];
 }
 
 - (void)sliderDidChange:(UISlider*)sender

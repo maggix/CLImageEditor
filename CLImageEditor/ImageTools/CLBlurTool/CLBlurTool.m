@@ -7,10 +7,6 @@
 
 #import "CLBlurTool.h"
 
-#import "UIView+Frame.h"
-#import "UIImage+Utility.h"
-
-
 typedef NS_ENUM(NSUInteger, CLBlurType)
 {
     kCLBlurTypeNormal = 0,
@@ -59,7 +55,7 @@ typedef NS_ENUM(NSUInteger, CLBlurType)
 
 + (NSString*)defaultTitle
 {
-    return @"Blur & Focus";
+    return NSLocalizedStringWithDefaultValue(@"CLBlurEffect_DefaultTitle", nil, [CLImageEditorTheme bundle], @"Blur & Focus", @"");
 }
 
 + (BOOL)isAvailable
@@ -73,16 +69,13 @@ typedef NS_ENUM(NSUInteger, CLBlurType)
     _originalImage = self.editor.imageView.image;
     _thumnailImage = [_originalImage resize:self.editor.imageView.frame.size];
     
-    CGFloat minZoomScale = self.editor.scrollView.minimumZoomScale;
-    self.editor.scrollView.maximumZoomScale = 0.95*minZoomScale;
-    self.editor.scrollView.minimumZoomScale = 0.95*minZoomScale;
-    [self.editor.scrollView setZoomScale:self.editor.scrollView.minimumZoomScale animated:YES];
+    [self.editor fixZoomScaleWithAnimated:YES];
     
     _blurSlider = [self sliderWithValue:0.2 minimumValue:0 maximumValue:1];
     _blurSlider.superview.center = CGPointMake(self.editor.view.width/2, self.editor.menuView.top-30);
     
     _handlerView = [[UIView alloc] initWithFrame:self.editor.imageView.frame];
-    [self.editor.scrollView addSubview:_handlerView];
+    [self.editor.imageView.superview addSubview:_handlerView];
     [self setHandlerView];
     
     _menuScroll = [[UIScrollView alloc] initWithFrame:self.editor.menuView.frame];
@@ -103,7 +96,7 @@ typedef NS_ENUM(NSUInteger, CLBlurType)
 
 - (void)cleanup
 {
-    [self.editor resetZoomScaleWithAnimate:YES];
+    [self.editor resetZoomScaleWithAnimated:YES];
     [_blurSlider.superview removeFromSuperview];
     [_handlerView removeFromSuperview];
     
@@ -119,10 +112,7 @@ typedef NS_ENUM(NSUInteger, CLBlurType)
 - (void)executeWithCompletionBlock:(void(^)(UIImage *image, NSError *error, NSDictionary *userInfo))completionBlock
 {
     dispatch_async(dispatch_get_main_queue(), ^{
-        UIActivityIndicatorView *indicator = [[UIActivityIndicatorView alloc] initWithFrame:CGRectMake(0, 0, 80, 80)];
-        indicator.backgroundColor = [UIColor colorWithWhite:0 alpha:0.6];
-        indicator.layer.cornerRadius = 5;
-        indicator.activityIndicatorViewStyle = UIActivityIndicatorViewStyleWhiteLarge;
+        UIActivityIndicatorView *indicator = [CLImageEditorTheme indicatorView];
         indicator.center = CGPointMake(_handlerView.width/2, _handlerView.height/2);
         [_handlerView addSubview:indicator];
         [indicator startAnimating];
@@ -143,34 +133,21 @@ typedef NS_ENUM(NSUInteger, CLBlurType)
 - (void)setBlurMenu
 {
     CGFloat W = 70;
+    CGFloat H = _menuScroll.height;
     CGFloat x = 0;
     
     NSArray *_menu = @[
-                       @{@"title":@"Normal", @"icon":[NSString stringWithFormat:@"CLImageEditor.bundle/%@/icon_normal.png", [self class]]},
-                       @{@"title":@"Circle", @"icon":[NSString stringWithFormat:@"CLImageEditor.bundle/%@/icon_circle.png", [self class]]},
-                       @{@"title":@"Band", @"icon":[NSString stringWithFormat:@"CLImageEditor.bundle/%@/icon_band.png", [self class]]},
+                       @{@"title":NSLocalizedStringWithDefaultValue(@"CLBlurEffect_MenuItemNormal", nil, [CLImageEditorTheme bundle], @"Normal", @""), @"icon":[CLImageEditorTheme imageNamed:[NSString stringWithFormat:@"%@/btn_normal.png", [self class]]]},
+                       @{@"title":NSLocalizedStringWithDefaultValue(@"CLBlurEffect_MenuItemCircle", nil, [CLImageEditorTheme bundle], @"Cirlcle", @""), @"icon":[CLImageEditorTheme imageNamed:[NSString stringWithFormat:@"%@/btn_circle.png", [self class]]]},
+                       @{@"title":NSLocalizedStringWithDefaultValue(@"CLBlurEffect_MenuItemBand", nil, [CLImageEditorTheme bundle], @"Band", @""), @"icon":[CLImageEditorTheme imageNamed:[NSString stringWithFormat:@"%@/btn_band.png", [self class]]]},
     ];
     
     NSInteger tag = 0;
     for(NSDictionary *obj in _menu){
-        UIView *view = [[UIView alloc] initWithFrame:CGRectMake(x, 0, W, _menuScroll.height)];
+        CLToolbarMenuItem *view = [CLImageEditorTheme menuItemWithFrame:CGRectMake(x, 0, W, H) target:self action:@selector(tappedBlurMenu:) toolInfo:nil];
         view.tag = tag++;
-        
-        UIImageView *iconView = [[UIImageView alloc] initWithFrame:CGRectMake(10, 5, 50, 50)];
-        iconView.clipsToBounds = YES;
-        iconView.layer.cornerRadius = 2;
-        iconView.image = [UIImage imageNamed:obj[@"icon"]];
-        [view addSubview:iconView];
-        
-        UILabel *label = [[UILabel alloc] initWithFrame:CGRectMake(0, W-10, W, 15)];
-        label.backgroundColor = [UIColor clearColor];
-        label.text = obj[@"title"];
-        label.font = [UIFont systemFontOfSize:10];
-        label.textAlignment = NSTextAlignmentCenter;
-        [view addSubview:label];
-        
-        UITapGestureRecognizer *gesture = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(tappedBlurMenu:)];
-        [view addGestureRecognizer:gesture];
+        view.title = obj[@"title"];
+        view.iconImage = obj[@"icon"];
         
         if(self.selectedMenu==nil){
             self.selectedMenu = view;
@@ -187,7 +164,7 @@ typedef NS_ENUM(NSUInteger, CLBlurType)
     if(selectedMenu != _selectedMenu){
         _selectedMenu.backgroundColor = [UIColor clearColor];
         _selectedMenu = selectedMenu;
-        _selectedMenu.backgroundColor = [[UIColor cyanColor] colorWithAlphaComponent:0.2];
+        _selectedMenu.backgroundColor = [CLImageEditorTheme toolbarSelectedButtonColor];
     }
 }
 
@@ -322,7 +299,7 @@ typedef NS_ENUM(NSUInteger, CLBlurType)
     frame.origin.x *= ratio;
     frame.origin.y *= ratio;
     
-    UIImage *mask = [UIImage imageNamed:@"CLImageEditor.bundle/CLBlurTool/circle.png"];
+    UIImage *mask = [CLImageEditorTheme imageNamed:[NSString stringWithFormat:@"%@/circle.png", [self class]]];
     UIGraphicsBeginImageContext(image.size);
     {
         CGContextSetFillColorWithColor(UIGraphicsGetCurrentContext() , [[UIColor whiteColor] CGColor]);
@@ -337,7 +314,7 @@ typedef NS_ENUM(NSUInteger, CLBlurType)
 
 - (UIImage*)bandBlurImage:(UIImage*)image withBlurImage:(UIImage*)blurImage
 {
-    UIImage *mask = [UIImage imageNamed:@"CLImageEditor.bundle/CLBlurTool/band.png"];
+    UIImage *mask = [CLImageEditorTheme imageNamed:[NSString stringWithFormat:@"%@/band.png", [self class]]];
     
     UIGraphicsBeginImageContext(image.size);
     {

@@ -21,7 +21,7 @@
 
 + (NSString*)defaultIconImagePath
 {
-    return [NSString stringWithFormat:@"CLImageEditor.bundle/%@/icon.png", NSStringFromClass([self class])];
+    return [NSString stringWithFormat:@"%@.bundle/%@/icon.png", [CLImageEditorTheme bundleName], NSStringFromClass([self class])];
 }
 
 + (CGFloat)defaultDockedNumber
@@ -33,8 +33,8 @@
                        @"CLAdjustmentTool",
                        @"CLEffectTool",
                        @"CLBlurTool",
-                       @"CLClippingTool",
                        @"CLRotateTool",
+                       @"CLClippingTool",
                        @"CLToneCurveTool",
                        ];
     return [tools indexOfObject:NSStringFromClass(self)];
@@ -53,6 +53,11 @@
 + (BOOL)isAvailable
 {
     return NO;
+}
+
++ (NSDictionary*)optionalInfo
+{
+    return nil;
 }
 
 #pragma mark-

@@ -7,11 +7,6 @@
 
 #import "CLEffectTool.h"
 
-#import "CLEffectBase.h"
-#import "UIImage+Utility.h"
-#import "UIView+Frame.h"
-#import "CLClassList.h"
-#import "UIView+CLImageToolInfo.h"
 
 @interface CLEffectTool()
 @property (nonatomic, strong) UIView *selectedMenu;
@@ -30,26 +25,12 @@
 
 + (NSArray*)subtools
 {
-    NSMutableArray *array = [NSMutableArray array];
-    
-    CLImageToolInfo *info = [CLImageToolInfo toolInfoForToolClass:[CLEffectBase class]];
-    if(info){
-        [array addObject:info];
-    }
-    
-    NSArray *list = [CLClassList subclassesOfClass:[CLEffectBase class]];
-    for(Class subtool in list){
-        info = [CLImageToolInfo toolInfoForToolClass:subtool];
-        if(info){
-            [array addObject:info];
-        }
-    }
-    return [array copy];
+    return [CLImageToolInfo toolsWithToolClass:[CLEffectBase class]];
 }
 
 + (NSString*)defaultTitle
 {
-    return @"Effect";
+    return NSLocalizedStringWithDefaultValue(@"CLEffectTool_DefaultTitle", nil, [CLImageEditorTheme bundle], @"Effect", @"");
 }
 
 + (BOOL)isAvailable
@@ -64,10 +45,7 @@
     _originalImage = self.editor.imageView.image;
     _thumnailImage = [_originalImage resize:self.editor.imageView.frame.size];
     
-    CGFloat minZoomScale = self.editor.scrollView.minimumZoomScale;
-    self.editor.scrollView.maximumZoomScale = 0.95*minZoomScale;
-    self.editor.scrollView.minimumZoomScale = 0.95*minZoomScale;
-    [self.editor.scrollView setZoomScale:self.editor.scrollView.minimumZoomScale animated:YES];
+    [self.editor fixZoomScaleWithAnimated:YES];
     
     _menuScroll = [[UIScrollView alloc] initWithFrame:self.editor.menuView.frame];
     _menuScroll.backgroundColor = self.editor.menuView.backgroundColor;
@@ -88,7 +66,7 @@
     [self.selectedEffect cleanup];
     [_indicatorView removeFromSuperview];
     
-    [self.editor resetZoomScaleWithAnimate:YES];
+    [self.editor resetZoomScaleWithAnimated:YES];
     
     [UIView animateWithDuration:kCLImageToolAnimationDuration
                      animations:^{
@@ -102,10 +80,7 @@
 - (void)executeWithCompletionBlock:(void(^)(UIImage *image, NSError *error, NSDictionary *userInfo))completionBlock
 {
     dispatch_async(dispatch_get_main_queue(), ^{
-        _indicatorView = [[UIActivityIndicatorView alloc] initWithFrame:CGRectMake(0, 0, 80, 80)];
-        _indicatorView.backgroundColor = [UIColor colorWithWhite:0 alpha:0.6];
-        _indicatorView.layer.cornerRadius = 5;
-        _indicatorView.activityIndicatorViewStyle = UIActivityIndicatorViewStyleWhiteLarge;
+        _indicatorView = [CLImageEditorTheme indicatorView];
         _indicatorView.center = self.editor.view.center;
         [self.editor.view addSubview:_indicatorView];
         [_indicatorView startAnimating];
@@ -125,6 +100,7 @@
 - (void)setEffectMenu
 {
     CGFloat W = 70;
+    CGFloat H = _menuScroll.height;
     CGFloat x = 0;
     
     for(CLImageToolInfo *info in self.toolInfo.sortedSubtools){
@@ -132,26 +108,7 @@
             continue;
         }
         
-        UIView *view = [[UIView alloc] initWithFrame:CGRectMake(x, 0, W, _menuScroll.height)];
-        view.toolInfo = info;
-        
-        UIImageView *iconView = [[UIImageView alloc] initWithFrame:CGRectMake(10, 5, 50, 50)];
-        iconView.clipsToBounds = YES;
-        iconView.layer.cornerRadius = 5;
-        iconView.contentMode = UIViewContentModeScaleAspectFill;
-        iconView.image = info.iconImage;
-        [view addSubview:iconView];
-        
-        UILabel *label = [[UILabel alloc] initWithFrame:CGRectMake(0, W-10, W, 15)];
-        label.backgroundColor = [UIColor clearColor];
-        label.text = info.title;
-        label.font = [UIFont systemFontOfSize:10];
-        label.textAlignment = NSTextAlignmentCenter;
-        [view addSubview:label];
-        
-        UITapGestureRecognizer *gesture = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(tappedMenu:)];
-        [view addGestureRecognizer:gesture];
-        
+        CLToolbarMenuItem *view = [CLImageEditorTheme menuItemWithFrame:CGRectMake(x, 0, W, H) target:self action:@selector(tappedMenu:) toolInfo:info];
         [_menuScroll addSubview:view];
         x += W;
         
@@ -181,10 +138,10 @@
     if(selectedMenu != _selectedMenu){
         _selectedMenu.backgroundColor = [UIColor clearColor];
         _selectedMenu = selectedMenu;
-        _selectedMenu.backgroundColor = [[UIColor cyanColor] colorWithAlphaComponent:0.2];
+        _selectedMenu.backgroundColor = [CLImageEditorTheme toolbarSelectedButtonColor];
         
         Class effectClass = NSClassFromString(_selectedMenu.toolInfo.toolName);
-        self.selectedEffect = [[effectClass alloc] initWithSuperView:self.editor.scrollView imageViewFrame:self.editor.imageView.frame toolInfo:_selectedMenu.toolInfo];
+        self.selectedEffect = [[effectClass alloc] initWithSuperView:self.editor.imageView.superview imageViewFrame:self.editor.imageView.frame toolInfo:_selectedMenu.toolInfo];
     }
 }
 

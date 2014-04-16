@@ -7,9 +7,6 @@
 
 #import "CLRotateTool.h"
 
-#import "UIView+Frame.h"
-
-
 
 
 @interface CLRotatePanel : UIView
@@ -27,10 +24,12 @@
 {
     UISlider *_rotateSlider;
     UIScrollView *_menuScroll;
-    CATransform3D _initialTransform;
     CGRect _initialRect;
     
+    BOOL _executed;
+    
     CLRotatePanel *_gridView;
+    UIImageView *_rotateImageView;
     
     NSInteger _flipState1;
     NSInteger _flipState2;
@@ -38,7 +37,7 @@
 
 + (NSString*)defaultTitle
 {
-    return @"Rotate";
+    return NSLocalizedStringWithDefaultValue(@"CLRotateTool_DefaultTitle", nil, [CLImageEditorTheme bundle], @"Rotate", @"");
 }
 
 + (BOOL)isAvailable
@@ -48,18 +47,16 @@
 
 - (void)setup
 {
-    CGFloat minZoomScale = self.editor.scrollView.minimumZoomScale;
-    self.editor.scrollView.maximumZoomScale = 0.95*minZoomScale;
-    self.editor.scrollView.minimumZoomScale = 0.95*minZoomScale;
-    [self.editor.scrollView setZoomScale:self.editor.scrollView.minimumZoomScale animated:YES];
+    _executed = NO;
     
-    _initialTransform = self.editor.imageView.layer.transform;
+    [self.editor fixZoomScaleWithAnimated:YES];
+    
     _initialRect = self.editor.imageView.frame;
     
     _flipState1 = 0;
     _flipState2 = 0;
     
-    _gridView = [[CLRotatePanel alloc] initWithSuperview:self.editor.scrollView frame:self.editor.imageView.frame];
+    _gridView = [[CLRotatePanel alloc] initWithSuperview:self.editor.imageView.superview frame:self.editor.imageView.frame];
     _gridView.backgroundColor = [UIColor clearColor];
     _gridView.bgColor = [self.editor.view.backgroundColor colorWithAlphaComponent:0.8];
     _gridView.gridColor = [[UIColor darkGrayColor] colorWithAlphaComponent:0.8];
@@ -78,6 +75,12 @@
     [UIView animateWithDuration:kCLImageToolAnimationDuration
                      animations:^{
                          _menuScroll.transform = CGAffineTransformIdentity;
+                     }
+                     completion:^(BOOL finished) {
+                         _rotateImageView = [[UIImageView alloc] initWithFrame:_initialRect];
+                         _rotateImageView.image = self.editor.imageView.image;
+                         [_gridView.superview insertSubview:_rotateImageView belowSubview:_gridView];
+                         self.editor.imageView.hidden = YES;
                      }];
 }
 
@@ -86,25 +89,34 @@
     [_rotateSlider.superview removeFromSuperview];
     [_gridView removeFromSuperview];
     
-    self.editor.imageView.layer.transform = _initialTransform;
-    [self.editor resetZoomScaleWithAnimate:YES];
+    if(_executed){
+        [self.editor resetZoomScaleWithAnimated:NO];
+        [self.editor fixZoomScaleWithAnimated:NO];
+        
+        _rotateImageView.transform = CGAffineTransformIdentity;
+        _rotateImageView.frame = self.editor.imageView.frame;
+        _rotateImageView.image = self.editor.imageView.image;
+    }
+    [self.editor resetZoomScaleWithAnimated:NO];
     
     [UIView animateWithDuration:kCLImageToolAnimationDuration
                      animations:^{
                          _menuScroll.transform = CGAffineTransformMakeTranslation(0, self.editor.view.height-_menuScroll.top);
+                         
+                         _rotateImageView.transform = CGAffineTransformIdentity;
+                         _rotateImageView.frame = self.editor.imageView.frame;
                      }
                      completion:^(BOOL finished) {
                          [_menuScroll removeFromSuperview];
+                         [_rotateImageView removeFromSuperview];
+                         self.editor.imageView.hidden = NO;
                      }];
 }
 
 - (void)executeWithCompletionBlock:(void(^)(UIImage *image, NSError *error, NSDictionary *userInfo))completionBlock
 {
     dispatch_async(dispatch_get_main_queue(), ^{
-        UIActivityIndicatorView *indicator = [[UIActivityIndicatorView alloc] initWithFrame:CGRectMake(0, 0, 80, 80)];
-        indicator.backgroundColor = [UIColor colorWithWhite:0 alpha:0.6];
-        indicator.layer.cornerRadius = 5;
-        indicator.activityIndicatorViewStyle = UIActivityIndicatorViewStyleWhiteLarge;
+        UIActivityIndicatorView *indicator = [CLImageEditorTheme indicatorView];
         indicator.center = CGPointMake(_gridView.width/2, _gridView.height/2);
         [_gridView addSubview:indicator];
         [indicator startAnimating];
@@ -114,6 +126,7 @@
         UIImage *image = [self buildImage:self.editor.imageView.image];
         
         dispatch_async(dispatch_get_main_queue(), ^{
+            _executed = YES;
             completionBlock(image, nil, nil);
         });
     });
@@ -124,33 +137,21 @@
 - (void)setMenu
 {
     CGFloat W = 70;
+    CGFloat H = _menuScroll.height;
     CGFloat x = 0;
     
     NSArray *_menu = @[
-                       @{@"title":@"", @"icon":[NSString stringWithFormat:@"CLImageEditor.bundle/%@/icon_rotate.png", [self class]]},
-                       @{@"title":@"", @"icon":[NSString stringWithFormat:@"CLImageEditor.bundle/%@/icon_flip1.png", [self class]]},
-                       @{@"title":@"", @"icon":[NSString stringWithFormat:@"CLImageEditor.bundle/%@/icon_flip2.png", [self class]]},
+                       @{@"title":NSLocalizedStringWithDefaultValue(@"CLRotateTool_MenuItemRotateTitle", nil, [CLImageEditorTheme bundle], @" ", @""), @"icon":[CLImageEditorTheme imageNamed:[NSString stringWithFormat:@"%@/btn_rotate.png", [self class]]]},
+                       @{@"title":NSLocalizedStringWithDefaultValue(@"CLRotateTool_MenuItemFlipTitle1", nil, [CLImageEditorTheme bundle], @" ", @""), @"icon":[CLImageEditorTheme imageNamed:[NSString stringWithFormat:@"%@/btn_flip1.png", [self class]]]},
+                       @{@"title":NSLocalizedStringWithDefaultValue(@"CLRotateTool_MenuItemFlipTitle2", nil, [CLImageEditorTheme bundle], @" ", @""), @"icon":[CLImageEditorTheme imageNamed:[NSString stringWithFormat:@"%@/btn_flip2.png", [self class]]]},
                        ];
     
     NSInteger tag = 0;
     for(NSDictionary *obj in _menu){
-        UIView *view = [[UIView alloc] initWithFrame:CGRectMake(x, 0, W, _menuScroll.height)];
+        CLToolbarMenuItem *view = [CLImageEditorTheme menuItemWithFrame:CGRectMake(x, 0, W, H) target:self action:@selector(tappedMenu:) toolInfo:nil];
         view.tag = tag++;
-        
-        UIImageView *iconView = [[UIImageView alloc] initWithFrame:CGRectMake(10, 5, 50, 50)];
-        iconView.clipsToBounds = YES;
-        iconView.image = [UIImage imageNamed:obj[@"icon"]];
-        [view addSubview:iconView];
-        
-        UILabel *label = [[UILabel alloc] initWithFrame:CGRectMake(0, W-10, W, 15)];
-        label.backgroundColor = [UIColor clearColor];
-        label.text = obj[@"title"];
-        label.font = [UIFont systemFontOfSize:10];
-        label.textAlignment = NSTextAlignmentCenter;
-        [view addSubview:label];
-        
-        UITapGestureRecognizer *gesture = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(tappedMenu:)];
-        [view addGestureRecognizer:gesture];
+        view.iconImage = obj[@"icon"];
+        view.title = obj[@"title"];
         
         [_menuScroll addSubview:view];
         x += W;
@@ -241,7 +242,7 @@
 
 - (void)rotateStateDidChange
 {
-    CATransform3D transform = [self rotateTransform:_initialTransform clockwise:YES];
+    CATransform3D transform = [self rotateTransform:CATransform3DIdentity clockwise:YES];
     
     CGFloat arg = _rotateSlider.value*M_PI;
     CGFloat Wnew = fabs(_initialRect.size.width * cos(arg)) + fabs(_initialRect.size.height * sin(arg));
@@ -252,9 +253,9 @@
     CGFloat scale = MIN(Rw, Rh) * 0.95;
     
     transform = CATransform3DScale(transform, scale, scale, 1);
-    self.editor.imageView.layer.transform = transform;
+    _rotateImageView.layer.transform = transform;
     
-    _gridView.gridRect = self.editor.imageView.frame;
+    _gridView.gridRect = _rotateImageView.frame;
 }
 
 - (UIImage*)buildImage:(UIImage*)image

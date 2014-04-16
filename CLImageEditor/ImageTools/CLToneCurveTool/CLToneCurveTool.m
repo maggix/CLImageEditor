@@ -7,8 +7,6 @@
 
 #import "CLToneCurveTool.h"
 
-#import "UIView+Frame.h"
-#import "UIImage+Utility.h"
 #import "CLSplineInterpolator.h"
 
 
@@ -57,7 +55,7 @@
 
 + (NSString*)defaultTitle
 {
-    return @"ToneCurve";
+    return NSLocalizedStringWithDefaultValue(@"CLToneCurveTool_DefaultTitle", nil, [CLImageEditorTheme bundle], @"ToneCurve", @"");
 }
 
 + (BOOL)isAvailable
@@ -87,14 +85,13 @@
     UIButton *btn = [UIButton buttonWithType:UIButtonTypeCustom];
     btn.frame = CGRectMake(_tonecurveView.right + 20, 15, 30, 30);
     [btn addTarget:self action:@selector(pushedHideBtn:) forControlEvents:UIControlEventTouchUpInside];
-    [btn setImage:[UIImage imageNamed:[NSString stringWithFormat:@"CLImageEditor.bundle/%@/arrow.png", [self class]]] forState:UIControlStateNormal];
+    [btn setImage:[CLImageEditorTheme imageNamed:[NSString stringWithFormat:@"%@/btn_arrow.png", [self class]]] forState:UIControlStateNormal];
     [_menuContainer addSubview:btn];
-    
     
     btn = [UIButton buttonWithType:UIButtonTypeCustom];
     btn.frame = CGRectMake(_tonecurveView.right + 20, _tonecurveView.bottom - 30, 30, 30);
     [btn addTarget:self action:@selector(pushedResetBtn:) forControlEvents:UIControlEventTouchUpInside];
-    [btn setImage:[UIImage imageNamed:[NSString stringWithFormat:@"CLImageEditor.bundle/%@/reset.png", [self class]]] forState:UIControlStateNormal];
+    [btn setImage:[CLImageEditorTheme imageNamed:[NSString stringWithFormat:@"%@/btn_reset.png", [self class]]] forState:UIControlStateNormal];
     [_menuContainer addSubview:btn];
     
     _menuContainer.transform = CGAffineTransformMakeTranslation(0, self.editor.view.height-_menuContainer.top);
@@ -120,10 +117,7 @@
 - (void)executeWithCompletionBlock:(void(^)(UIImage *image, NSError *error, NSDictionary *userInfo))completionBlock
 {
     dispatch_async(dispatch_get_main_queue(), ^{
-        _indicatorView = [[UIActivityIndicatorView alloc] initWithFrame:CGRectMake(0, 0, 80, 80)];
-        _indicatorView.backgroundColor = [UIColor colorWithWhite:0 alpha:0.6];
-        _indicatorView.layer.cornerRadius = 5;
-        _indicatorView.activityIndicatorViewStyle = UIActivityIndicatorViewStyleWhiteLarge;
+        _indicatorView = [CLImageEditorTheme indicatorView];
         _indicatorView.center = self.editor.view.center;
         [self.editor.view addSubview:_indicatorView];
         [_indicatorView startAnimating];
